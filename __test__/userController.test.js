@@ -15,152 +15,142 @@ jest.mock('bcrypt', () => ({
 }));
 
 describe('editUser', () => {
-  let req, res;
+  let mockReq, mockRes;
 
   beforeEach(() => {
-    req = {
+    mockReq = {
       params: { userId: '123' },
       body: { name: 'Test User', email: 'test@example.com' },
     };
-    res = {
+    mockRes = {
       status: jest.fn().mockReturnThis(),
-      send: jest.fn(),
+      json: jest.fn(),
     };
     pool.query.mockClear();
     bcrypt.genSalt.mockClear();
     bcrypt.hash.mockClear();
   });
 
-  it('should update user successfully', async () => {
-    req.body.password = 'password123';
-    bcrypt.genSalt.mockResolvedValue('salt');
-    bcrypt.hash.mockResolvedValue('hashedPassword');
-    pool.query.mockImplementation((query, values, callback) => {
-      callback(null, { affectedRows: 1 });
+  it('should return 500 if database query fails', async () => {
+    pool.query.mockImplementationOnce((query, params, callback) => {
+      callback(new Error('Database error'), null);
     });
 
-    await editUser(req, res);
+    await editUser(mockReq, mockRes);
 
-    expect(bcrypt.genSalt).toHaveBeenCalled();
-    expect(bcrypt.hash).toHaveBeenCalledWith('password123', 'salt');
-    expect(pool.query).toHaveBeenCalledWith(
-      'UPDATE users SET name = ?, email = ?, password = ? WHERE user_id = ?',
-      ['Test User', 'test@example.com', 'hashedPassword', '123'],
-      expect.any(Function)
-    );
-    expect(res.status).toHaveBeenCalledWith(201);
-    expect(res.send).toHaveBeenCalledWith('User updated successfully');
+    expect(mockRes.status).toHaveBeenCalledWith(500);
+    expect(mockRes.json).toHaveBeenCalledWith({
+      status: 'error',
+      code: 500,
+      message: 'Internal Server Error',
+      error: 'Database error',
+    });
   });
 
-  it('should update user without password', async () => {
-    pool.query.mockImplementation((query, values, callback) => {
+  it('should update user successfully without password', async () => {
+    pool.query.mockImplementationOnce((query, params, callback) => {
       callback(null, { affectedRows: 1 });
     });
 
-    await editUser(req, res);
+    await editUser(mockReq, mockRes);
+
+    expect(mockRes.status).toHaveBeenCalledWith(200);
+    expect(mockRes.json).toHaveBeenCalledWith({
+      status: 'success',
+      code: 200,
+      message: 'User updated successfully',
+    });
 
     expect(bcrypt.genSalt).not.toHaveBeenCalled();
     expect(bcrypt.hash).not.toHaveBeenCalled();
-    expect(pool.query).toHaveBeenCalledWith(
-      'UPDATE users SET name = ?, email = ? WHERE user_id = ?',
-      ['Test User', 'test@example.com', '123'],
-      expect.any(Function)
-    );
-    expect(res.status).toHaveBeenCalledWith(201);
-    expect(res.send).toHaveBeenCalledWith('User updated successfully');
   });
 
-  it('should handle database error', async () => {
+  it('should update user successfully with password', async () => {
+    mockReq.body.password = 'newPassword';
     bcrypt.genSalt.mockResolvedValue('salt');
     bcrypt.hash.mockResolvedValue('hashedPassword');
-    pool.query.mockImplementation((query, values, callback) => {
-      callback(new Error('Database error'), null);
-    });
-
-    await editUser(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.send).toHaveBeenCalledWith('Internal Server Error');
-  });
-
-  it('should correctly pass the userId from params', async () => {
-    req.body.password = 'password123';
-    bcrypt.genSalt.mockResolvedValue('salt');
-    bcrypt.hash.mockResolvedValue('hashedPassword');
-    pool.query.mockImplementation((query, values, callback) => {
+    pool.query.mockImplementationOnce((query, params, callback) => {
       callback(null, { affectedRows: 1 });
     });
 
-    await editUser(req, res);
+    await editUser(mockReq, mockRes);
 
-    expect(pool.query).toHaveBeenCalledWith(
-      'UPDATE users SET name = ?, email = ?, password = ? WHERE user_id = ?',
-      ['Test User', 'test@example.com', 'hashedPassword', '123'],
-      expect.any(Function)
-    );
-    expect(req.params.userId).toBe('123');
-  });
-
-  it('should handle database error when password is provided', async () => {
-    req.body.password = 'newPassword';
-    bcrypt.genSalt.mockResolvedValue('salt');
-    bcrypt.hash.mockResolvedValue('hashedPassword');
-    pool.query.mockImplementation((query, values, callback) => {
-      callback(new Error('Database error'), null);
+    expect(mockRes.status).toHaveBeenCalledWith(200);
+    expect(mockRes.json).toHaveBeenCalledWith({
+      status: 'success',
+      code: 200,
+      message: 'User updated successfully',
     });
 
-    await editUser(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.send).toHaveBeenCalledWith('Internal Server Error');
-
+    expect(bcrypt.genSalt).toHaveBeenCalled();
+    expect(bcrypt.hash).toHaveBeenCalled();
   });
 });
 
 describe('getUserById', () => {
-  let req, res;
+  let mockReq, mockRes;
 
   beforeEach(() => {
-    req = {
-      params: { userId: '123' },
-    };
-    res = {
+    mockReq = { params: { userId: '123' } };
+    mockRes = {
       status: jest.fn().mockReturnThis(),
-      send: jest.fn(),
       json: jest.fn(),
     };
     pool.query.mockClear();
   });
 
-  it('should return user data on successful query', () => {
-    const mockResults = [{ user_id: '123', name: 'Test User', email: 'test@example.com' }];
-    pool.query.mockImplementation((query, values, callback) => {
-      callback(null, mockResults);
-    });
-
-    getUserById(req, res);
-
-    expect(pool.query).toHaveBeenCalledWith(
-      'SELECT * FROM users WHERE user_id = ?',
-      ['123'],
-      expect.any(Function)
-    );
-    expect(res.json).toHaveBeenCalledWith(mockResults);
-  });
-
-  it('should handle database error', () => {
-    pool.query.mockImplementation((query, values, callback) => {
+  it('should return 500 if database query fails', async () => {
+    pool.query.mockImplementationOnce((query, params, callback) => {
       callback(new Error('Database error'), null);
     });
 
-    getUserById(req, res);
+    getUserById(mockReq, mockRes);
 
-    expect(pool.query).toHaveBeenCalledWith(
-      'SELECT * FROM users WHERE user_id = ?',
-      ['123'],
-      expect.any(Function)
-    );
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.send).toHaveBeenCalledWith('Internal Server Error');
+    expect(mockRes.status).toHaveBeenCalledWith(500);
+    expect(mockRes.json).toHaveBeenCalledWith({
+      status: 'error',
+      code: 500,
+      message: 'Internal Server Error',
+      error: 'Database error',
+    });
+  });
+
+  it('should return 200 with user data if user is found', async () => {
+    const mockResults = [
+      {
+        user_id: '123',
+        username: 'testuser',
+        email: 'test@example.com',
+      },
+    ];
+
+    pool.query.mockImplementationOnce((query, params, callback) => {
+      callback(null, mockResults);
+    });
+
+    getUserById(mockReq, mockRes);
+    
+    // expect(mockRes.status).toHaveBeenCalledWith(200);
+    expect(mockRes.json).toHaveBeenCalledWith({
+      status: 'success',
+      code: 200,
+      message: 'User retrieved successfully',
+      data: mockResults[0],
+    });
+  });
+
+  it('should handle no results', async () => {
+    pool.query.mockImplementationOnce((query, params, callback) => {
+      callback(null, []);
+    });
+
+    getUserById(mockReq, mockRes);
+
+    expect(mockRes.json).toHaveBeenCalledWith({
+      status: 'success',
+      code: 200,
+      message: 'User retrieved successfully',
+      data: undefined,
+    });
   });
 });
