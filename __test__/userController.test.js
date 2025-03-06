@@ -130,7 +130,6 @@ describe('getUserById', () => {
 
     getUserById(mockReq, mockRes);
     
-    // expect(mockRes.status).toHaveBeenCalledWith(200);
     expect(mockRes.json).toHaveBeenCalledWith({
       status: 'success',
       code: 200,
