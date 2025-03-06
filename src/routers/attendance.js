@@ -4,6 +4,7 @@ const attendanceController = require('../controllers/attendanceController');
 const verifyTokenJWT = require('../middleware/verifyTokenJWT');
 
 router.post('/api/attendance', verifyTokenJWT.verifyToken, attendanceController.createAttendance);
-router.post('/api/attendance/report', verifyTokenJWT.verifyToken, attendanceController.getAttendances);
+router.get('/api/attendance/filter', verifyTokenJWT.verifyToken, attendanceController.filterAttendances);
+router.get('/api/attendance', verifyTokenJWT.verifyToken, attendanceController.getAttendances);
 
 module.exports = router;

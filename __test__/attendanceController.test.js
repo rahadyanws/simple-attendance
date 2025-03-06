@@ -1,201 +1,248 @@
 // attendanceController.test.js (Jest test)
-const { createAttendance, getAttendances } = require('../src/controllers/attendanceController');
+const { createAttendance, filterAttendances, getAttendances } = require('../src/controllers/attendanceController');
 const { pool } = require('../src/configs/mysql');
 const { v4: uuidv4 } = require('uuid');
 // const jwt = require('jsonwebtoken');
 const moment = require('moment-timezone');
 
 jest.mock('../src/configs/mysql', () => ({
-    pool: {
-        query: jest.fn(),
-    },
+  pool: {
+    query: jest.fn(),
+  },
 }));
 jest.mock('uuid');
-// jest.mock('jsonwebtoken');
 jest.mock('moment-timezone');
 
 describe('createAttendance', () => {
-    let req, res;
+  let req, res;
 
-    beforeEach(() => {
-        req = {
-            headers: {
-                authorization: 'Bearer mock-token',
-            },
-            body: {
-                userId: '1',
-                latitude: '12.345',
-                longitude: '67.890',
-                ip: '192.168.1.1',
-                photo: 'photo.jpg',
-            },
-        };
-        res = {
-            status: jest.fn().mockReturnThis(),
-            send: jest.fn(),
-        };
-        pool.query.mockClear();
-        uuidv4.mockReturnValue('mock-uuid');
+  beforeEach(() => {
+    req = {
+      headers: {
+        authorization: 'Bearer mock-token',
+      },
+      body: {
+        userId: '1',
+        latitude: '12.345',
+        longitude: '67.890',
+        ip: '192.168.1.1',
+        photo: 'photo.jpg',
+      },
+    };
+    res = {
+      status: jest.fn().mockReturnThis(),
+      send: jest.fn(),
+    };
+    pool.query.mockClear();
+    uuidv4.mockReturnValue('mock-uuid');
 
-        mockDate = new Date('2024-01-01T12:00:00.000Z');
-        jest.spyOn(global, 'Date').mockImplementation(() => mockDate);
+    mockDate = new Date('2024-01-01T12:00:00.000Z');
+    jest.spyOn(global, 'Date').mockImplementation(() => mockDate);
+  });
 
-        // jwt.verify.mockImplementation((token, secret, callback) => {
-        //     callback(null, { userId: 1 }); // Corrected line
-        // });
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('should create attendance successfully', (done) => {
+    pool.query.mockImplementation((sql, values, callback) => {
+      callback(null, { insertId: 1 });
     });
 
-    afterEach(() => {
-        jest.restoreAllMocks();
+    createAttendance(req, res);
+
+    // expect(jwt.verify).toHaveBeenCalled();
+    expect(uuidv4).toHaveBeenCalled();
+
+    expect(pool.query).toHaveBeenCalledWith(
+      'INSERT INTO attendances (attendance_id, user_id, latitude, longitude, ip, photo, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      ['mock-uuid', '1', '12.345', '67.890', '192.168.1.1', 'photo.jpg', mockDate],
+      expect.any(Function)
+    );
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.send).toHaveBeenCalledWith('Attendance created successfully');
+    done();
+  });
+
+  it('should create attendance successfully', async () => {
+    pool.query.mockImplementation((sql, values, callback) => {
+      callback(null, { insertId: 1 });
     });
 
-    it('should create attendance successfully', (done) => {
-        pool.query.mockImplementation((sql, values, callback) => {
-            callback(null, { insertId: 1 });
-        });
+    await createAttendance(req, res);
 
-        createAttendance(req, res);
+    // expect(jwt.verify).toHaveBeenCalled();
+    expect(uuidv4).toHaveBeenCalled();
+    expect(pool.query).toHaveBeenCalledWith(
+      'INSERT INTO attendances (attendance_id, user_id, latitude, longitude, ip, photo, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      ['mock-uuid', '1', '12.345', '67.890', '192.168.1.1', 'photo.jpg', mockDate],
+      expect.any(Function)
+    );
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.send).toHaveBeenCalledWith('Attendance created successfully');
+  });
+});
 
-        // expect(jwt.verify).toHaveBeenCalled();
-        expect(uuidv4).toHaveBeenCalled();
+describe('filterAttendances', () => {
+  let req, res;
 
-        expect(pool.query).toHaveBeenCalledWith(
-            'INSERT INTO attendances (attendance_id, user_id, latitude, longitude, ip, photo, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            ['mock-uuid', '1', '12.345', '67.890', '192.168.1.1', 'photo.jpg', mockDate],
-            expect.any(Function)
-        );
-        expect(res.status).toHaveBeenCalledWith(201);
-        expect(res.send).toHaveBeenCalledWith('Attendance created successfully');
-        done();
+  beforeEach(() => {
+    req = { query: {} };
+    res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+    pool.query.mockClear();
+    moment.mockClear();
+  });
+
+  it('should return 500 if database query fails', async () => {
+    pool.query.mockImplementationOnce((query, params, callback) => {
+      callback(new Error('Database error'), null);
     });
 
-    it('should create attendance successfully', async () => {
-        pool.query.mockImplementation((sql, values, callback) => {
-            callback(null, { insertId: 1 });
-        });
+    filterAttendances(req, res);
 
-        await createAttendance(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Internal Server Error' });
+  });
 
-        // expect(jwt.verify).toHaveBeenCalled();
-        expect(uuidv4).toHaveBeenCalled();
-        expect(pool.query).toHaveBeenCalledWith(
-            'INSERT INTO attendances (attendance_id, user_id, latitude, longitude, ip, photo, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            ['mock-uuid', '1', '12.345', '67.890', '192.168.1.1', 'photo.jpg', mockDate],
-            expect.any(Function)
-        );
-        expect(res.status).toHaveBeenCalledWith(201);
-        expect(res.send).toHaveBeenCalledWith('Attendance created successfully');
+  it('should return attendances with timezone conversion', async () => {
+    const results = [
+      {
+        name: 'John Doe',
+        latitude: 1.23,
+        longitude: 4.56,
+        ip: '192.168.1.1',
+        created_at: '2023-11-01T10:00:00Z',
+      },
+      {
+        name: 'Jane Smith',
+        latitude: 7.89,
+        longitude: 10.11,
+        ip: '192.168.1.2',
+        created_at: '2023-11-02T12:00:00Z',
+      },
+    ];
+
+    pool.query.mockImplementationOnce((query, params, callback) => {
+      callback(null, results);
     });
 
-    // it('should handle database error', async () => {
-    //     pool.query.mockImplementation((sql, values, callback) => {
-    //         callback(new Error('Database error'), null);
-    //     });
+    const mockMomentTz = jest.fn().mockReturnThis();
+    const mockMomentFormat = jest.fn().mockReturnValue('2023-11-01T17:00:00+07:00'); // Mocked timezone conversion
 
-    //     await createAttendance(req, res);
+    moment.mockReturnValue({ tz: mockMomentTz, format: mockMomentFormat });
 
-    //     expect(res.status).toHaveBeenCalledWith(500);
-    //     expect(res.send).toHaveBeenCalledWith('Internal Server Error');
-    // });
+    req.query.timezone = 'Asia/Jakarta'; // Set timezone in request query
 
-    // it('should handle jwt verify error', (done) => {
-    //     jwt.verify.mockImplementation((token, secret, callback) => {
-    //         callback(new Error('JWT verification failed'), null);
-    //     });
-    //     createAttendance(req, res);
-    //     expect(res.status).toHaveBeenCalledWith(500);
-    //     expect(res.send).toHaveBeenCalledWith('Internal Server Error');
-    //     done();
-    // })
+    filterAttendances(req, res);
+
+    expect(res.json).toHaveBeenCalled();
+    const responseData = res.json.mock.calls[0][0];
+    expect(responseData).toHaveLength(2);
+    expect(responseData[0].created_at).toBeInstanceOf(Date);
+    expect(responseData[0].created_at.toISOString()).toBe('2023-11-01T10:00:00.000Z'); //Ensure that the date object returns the UTC value.
+  });
+
+  it('should handle userId, fromDate, and toDate filters', async () => {
+    req.query = {
+      userId: 'user123',
+      fromDate: '2023-10-26T00:00:00Z',
+      toDate: '2023-10-27T23:59:59Z',
+    };
+
+    filterAttendances(req, res);
+
+    expect(pool.query).toHaveBeenCalled();
+    const query = pool.query.mock.calls[0][0];
+    const params = pool.query.mock.calls[0][1];
+
+    expect(query).toContain('AND a.user_id = ?');
+    expect(query).toContain('AND a.created_at >= ?');
+    expect(query).toContain('AND a.created_at <= ?');
+    expect(params).toEqual(['user123', '2023-10-26T00:00:00Z', '2023-10-27T23:59:59Z']);
+  });
+
+  it('should default to UTC timezone if none is provided', async () => {
+    const results = [{ name: 'Test', latitude: 0, longitude: 0, ip: '1.1.1.1', created_at: '2023-11-01T10:00:00Z' }];
+
+    pool.query.mockImplementationOnce((query, params, callback) => {
+      callback(null, results);
+    });
+
+    const mockMomentTz = jest.fn().mockReturnThis();
+    const mockMomentFormat = jest.fn().mockReturnValue('2023-11-01T10:00:00Z');
+
+    moment.mockReturnValue({ tz: mockMomentTz, format: mockMomentFormat });
+
+    filterAttendances(req, res);
+
+    expect(moment).toHaveBeenCalled();
+    expect(moment.mock.calls[0][0]).toBe('2023-11-01T10:00:00Z');
+  });
+
 });
 
 describe('getAttendances', () => {
-    let req, res;
+  let req, res;
 
-    beforeEach(() => {
-        req = {
-            body: {
-                userId: 1,
-                fromDate: '2024-01-01',
-                toDate: '2024-01-31',
-                timezone: 'Asia/Jakarta',
-            },
-        };
-        res = {
-            status: jest.fn().mockReturnThis(),
-            json: jest.fn(),
-        };
-        pool.query.mockClear();
+  beforeEach(() => {
+    req = {};
+    res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+    pool.query.mockClear();
+  });
+
+  it('should return 500 if database query fails', async () => {
+    pool.query.mockImplementationOnce((query, callback) => {
+      callback(new Error('Database error'), null);
     });
 
-    it('should get attendances successfully with filters and timezone conversion', (done) => {
-        const results = [
-            { attendance_id: 1, user_id: 1, created_at: '2024-01-15T10:00:00.000Z' },
-            { attendance_id: 2, user_id: 1, created_at: '2024-01-20T14:30:00.000Z' },
-        ];
-        const convertedResults = [
-            { attendance_id: 1, user_id: 1, created_at: '2024-01-15T17:00:00+07:00' },
-            { attendance_id: 2, user_id: 1, created_at: '2024-01-15T17:00:00+07:00' },
-        ];
+    getAttendances(req, res);
 
-        pool.query.mockImplementation((sql, values, callback) => {
-            callback(null, results);
-        });
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Internal Server Error' });
+  });
 
-        moment.mockImplementation(() => ({
-          tz: jest.fn().mockReturnValue({
-            format: jest.fn().mockReturnValue(convertedResults[0].created_at).mockReturnValueOnce(convertedResults[0].created_at).mockReturnValue(convertedResults[1].created_at)
-          })
-        }));
+  it('should return attendances successfully', async () => {
+    const results = [
+      {
+        name: 'John Doe',
+        latitude: 1.23,
+        longitude: 4.56,
+        ip: '192.168.1.1',
+        created_at: '2023-11-01T10:00:00Z',
+      },
+      {
+        name: 'Jane Smith',
+        latitude: 7.89,
+        longitude: 10.11,
+        ip: '192.168.1.2',
+        created_at: '2023-11-02T12:00:00Z',
+      },
+    ];
 
-        getAttendances(req, res);
-
-        expect(pool.query).toHaveBeenCalledWith(
-            'SELECT * FROM attendances WHERE 1=1 AND user_id = ? AND created_at >= ? AND created_at <= ?',
-            [1, '2024-01-01', '2024-01-31'],
-            expect.any(Function)
-        );
-        expect(res.json).toHaveBeenCalledWith(convertedResults);
-        done();
+    pool.query.mockImplementationOnce((query, callback) => {
+      callback(null, results);
     });
 
-    it('should get attendances successfully with default UTC timezone', (done) => {
-      req.body.timezone = undefined;
-      const results = [
-        { attendance_id: 1, user_id: 1, created_at: '2024-01-15T10:00:00.000Z' }
-      ];
-      moment.mockImplementation(() => ({
-        tz: jest.fn().mockReturnValue({
-          format: jest.fn().mockReturnValue("2024-01-15T10:00:00Z")
-        })
-      }));
-      pool.query.mockImplementation((sql, values, callback) => {
-        callback(null, results);
-      });
-      getAttendances(req, res);
-      expect(res.json).toHaveBeenCalledWith([{ attendance_id: 1, user_id: 1, created_at: '2024-01-15T10:00:00Z' }]);
-      done();
-    })
+    getAttendances(req, res);
 
-    it('should handle database error', (done) => {
-        pool.query.mockImplementation((sql, values, callback) => {
-            callback(new Error('Database error'), null);
-        });
+    expect(res.json).toHaveBeenCalledWith(results);
+  });
 
-        getAttendances(req, res);
-
-        expect(res.status).toHaveBeenCalledWith(500);
-        expect(res.json).toHaveBeenCalledWith({ error: 'Internal Server Error' });
-        done();
+  it('should handle errors in the try-catch block', async () => {
+    // Simulate an error in the try-catch block
+    pool.query = jest.fn(() => {
+      throw new Error('Simulated error');
     });
 
-    it('should handle general error', (done) => {
-      pool.query.mockImplementation(() => {
-        throw new Error("general error");
-      });
-      getAttendances(req,res);
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({error: 'Internal Server Error'});
-      done();
-    })
+    getAttendances(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Internal Server Error' });
+  });
 });
