@@ -54,6 +54,51 @@ Before running this project, make sure you have installed:
 
     The server will run at `http://localhost:[PORT]` (or the port you configured).
 
+5. Run mysql query into your database
+```
+--
+-- Database structure for db `attendances`
+--
+CREATE DATABASE attendance
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_general_ci;
+--
+-- Table structure for table `attendances`
+--
+REATE TABLE `attendances` (
+  `attendance_id` varchar(100) NOT NULL,
+  `user_id` varchar(100) NOT NULL,
+  `latitude` varchar(100) NOT NULL,
+  `longitude` varchar(100) NOT NULL,
+  `ip` varchar(100) NOT NULL,
+  `photo` text NOT NULL,
+  `created_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Table structure for table `users`
+--
+CREATE TABLE `users` (
+  `user_id` varchar(100) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `password` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Indexes for table `attendances`
+--
+ALTER TABLE `attendances`
+  ADD PRIMARY KEY (`attendance_id`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`user_id`);
+COMMIT;
+```
+
 ## Available Scripts
 
 * `npm start`: Runs the server in production mode.
