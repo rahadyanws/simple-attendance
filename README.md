@@ -24,7 +24,8 @@ Before running this project, make sure you have installed:
 1.  Clone the repository:
 
     ```bash
-    git clone [https://github.com/rahadyanws/simple-attendance.git](https://www.google.com/search?q=https://github.com/rahadyanws/simple-attendance.git)
+    git clone https://github.com/rahadyanws/simple-attendance.git 
+    
     cd simple-attendance
     ```
 
@@ -50,7 +51,7 @@ Before running this project, make sure you have installed:
     # or
     npm run dev
     ```
-    
+
     The server will run at `http://localhost:[PORT]` (or the port you configured).
 
 ## Available Scripts
