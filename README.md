@@ -1,6 +1,6 @@
 # [SIMPLE ATTENDANCE]
 
-[A brief description of your project. Explain the purpose and main features of the project.]
+A simple application for recording attendance by capturing a photo, detecting location, and logging the IP address. 
 
 ## Key Features
 
@@ -17,7 +17,7 @@ Before running this project, make sure you have installed:
 
 * [Node.js](https://nodejs.org/) (version >= [required Node.js version])
 * [npm](https://www.npmjs.com/) or [Yarn](https://yarnpkg.com/) (optional)
-* [Database] (if your project uses a database)
+* [Mysql](https://mariadb.org/) (if your project uses a database)
 
 ## Installation
 
@@ -118,8 +118,8 @@ This project is licensed under [Your License] - see the [LICENSE](LICENSE) file 
 
 ## Contact
 
-* rahadyanws@gmail.com
-* https://github.com/rahadyanws
+* [rahadyanws@gmail.com](rahadyanws@gmail.com)
+* [https://github.com/rahadyanws](https://github.com/rahadyanws)
 
 ## Acknowledgments
 
