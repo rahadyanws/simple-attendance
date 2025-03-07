@@ -86,6 +86,16 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+-- Dumping data for table `users`
+-- For auth
+-- email: sachio@gmail.com
+-- password: password
+--
+
+INSERT INTO `users` (`user_id`, `name`, `email`, `password`) VALUES
+('4985836d-c6fd-4f94-af6d-6e6c9893d510', 'Sachio', 'sachio@gmail.com', '$2b$10$KsYg9RRatG0u9wHS1bnIKe1EF.7RDCRuK19snblNn0mtG5keGiXF.');
+
+--
 -- Indexes for table `attendances`
 --
 ALTER TABLE `attendances`
